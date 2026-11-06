@@ -1,0 +1,62 @@
+
+import cv2
+import numpy as np
+
+
+FRAMES_PER_VIDEO = 16
+IMG_SIZE = 160
+
+
+def preprocess_video(video_path):
+
+    cap = cv2.VideoCapture(video_path)
+
+    if not cap.isOpened():
+        raise ValueError("Unable to open video file.")
+
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    if total_frames < FRAMES_PER_VIDEO:
+        cap.release()
+        raise ValueError("Video must contain at least 16 frames.")
+
+    frame_indices = np.linspace(
+        0,
+        total_frames - 1,
+        FRAMES_PER_VIDEO
+    ).astype(int)
+
+    frames = []
+    frame_id = 0
+    selected_index = 0
+
+    while selected_index < FRAMES_PER_VIDEO:
+
+        ret, frame = cap.read()
+
+        if not ret:
+            break
+
+        if frame_id == frame_indices[selected_index]:
+
+            frame = cv2.resize(
+                frame,
+                (IMG_SIZE, IMG_SIZE)
+            )
+
+            frame = frame.astype("float32") / 255.0
+
+            frames.append(frame)
+
+            selected_index += 1
+
+        frame_id += 1
+
+    cap.release()
+
+    if len(frames) != FRAMES_PER_VIDEO:
+        raise ValueError("Could not extract all 16 frames.")
+
+    frames = np.array(frames, dtype=np.float32)
+
+    return np.expand_dims(frames, axis=0)
