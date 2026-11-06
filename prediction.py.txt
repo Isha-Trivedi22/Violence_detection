@@ -1,0 +1,53 @@
+
+from pathlib import Path
+from functools import lru_cache
+
+import numpy as np
+from tensorflow.keras.models import load_model
+
+from preprocessing import preprocess_video
+
+
+MODEL_PATH = Path(__file__).resolve().parent / "violence_model_TL.h5"
+
+
+@lru_cache(maxsize=1)
+def get_model():
+    if not MODEL_PATH.exists():
+        raise FileNotFoundError(
+            f"Model file not found: {MODEL_PATH}"
+        )
+
+    model = load_model(
+        str(MODEL_PATH),
+        compile=False
+    )
+
+    return model
+
+
+def predict_video(video_path):
+
+    model = get_model()
+
+    processed_video = preprocess_video(video_path)
+
+    prediction = model.predict(
+        processed_video,
+        verbose=0
+    )
+
+    violence_probability = float(np.squeeze(prediction))
+
+    if violence_probability >= 0.5:
+        label = "Violence"
+        confidence = violence_probability
+    else:
+        label = "Non-Violence"
+        confidence = 1 - violence_probability
+
+    return {
+        "prediction": label,
+        "confidence": confidence,
+        "violence_probability": violence_probability
+    }
