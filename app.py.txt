@@ -1,0 +1,79 @@
+
+import os
+import tempfile
+from pathlib import Path
+
+import streamlit as st
+
+from prediction import predict_video
+
+
+st.set_page_config(
+    page_title="Violence Detection System",
+    page_icon="🎥",
+    layout="centered"
+)
+
+
+st.title("🎥 Violence Detection System")
+
+st.write(
+    "Upload a video to detect whether it contains "
+    "violence or non-violence."
+)
+
+st.info(
+    "This is an educational deep-learning prototype. "
+    "Predictions may not always be accurate."
+)
+
+
+uploaded_file = st.file_uploader(
+    "Choose a video",
+    type=["mp4", "avi", "mov", "mkv"]
+)
+
+
+if uploaded_file is not None:
+
+    st.video(uploaded_file)
+
+    if st.button("Analyze Video", type="primary"):
+
+        temp_video_path = None
+
+        try:
+            with tempfile.NamedTemporaryFile(
+                delete=False,
+                suffix=Path(uploaded_file.name).suffix
+            ) as temp_file:
+
+                temp_file.write(uploaded_file.getbuffer())
+                temp_video_path = temp_file.name
+
+            with st.spinner("Analyzing video... Please wait."):
+
+                result = predict_video(temp_video_path)
+
+            st.subheader("Analysis Result")
+
+            if result["prediction"] == "Violence":
+                st.error("Prediction: Violence")
+            else:
+                st.success("Prediction: Non-Violence")
+
+            st.write(
+                f"Confidence: {result['confidence'] * 100:.2f}%"
+            )
+
+            st.write(
+                f"Violence Probability: "
+                f"{result['violence_probability'] * 100:.2f}%"
+            )
+
+        except Exception as e:
+            st.error(f"Error while analyzing video: {e}")
+
+        finally:
+            if temp_video_path and os.path.exists(temp_video_path):
+                os.remove(temp_video_path)
